@@ -111,7 +111,7 @@ final def JC310b43 = libsSdk + '/jc310b43_kit'
 //
 // JC310b43 supports building also for lower versions (cap.targetsdk).
 // If another SDK is selected, please comment the cap.targetsdk setting.
-final def JC_SELECTED = JC310b43
+final def JC_SELECTED = JC303
 
 javacard {
 
@@ -121,8 +121,8 @@ javacard {
 
         // Using custom repo with jcardsim
         debugGpPro true
-        addImplicitJcardSim false
-        addImplicitJcardSimJunit false
+        addImplicitJcardSim true
+        addImplicitJcardSimJunit true
 
         //noinspection GroovyAssignabilityCheck
         cap {
@@ -135,7 +135,7 @@ javacard {
             // Here you can specify path to the SDK you want to use.
             // Only JC304 and higher are supported for targeting.
             // If JC310b43 is not used, targetsdk cannot be set.
-            targetsdk JC304
+            targetsdk JC303
 
             // Override java bytecode version if needed.
             // javaversion '1.7'
@@ -147,9 +147,9 @@ javacard {
             }
 
             //noinspection GroovyAssignabilityCheck
-            // dependencies {
-            //     remote 'com.klinec:globalplatform:2.1.1'
-            // }
+             dependencies {
+                 remote 'com.klinec:jcardsim:3.0.5.11'
+             }
         }
     }
 }
