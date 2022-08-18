@@ -1,4 +1,4 @@
-package crypto;
+package applet.crypto;
 
 import javacard.framework.*;
 
