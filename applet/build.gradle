@@ -126,7 +126,7 @@ javacard {
 
         //noinspection GroovyAssignabilityCheck
         cap {
-            packageName 'applet'
+            packageName 'applet.crypto'
             version '0.1'
             aid '01:ff:ff:04:05:06:07:08:09'
             output 'applet.cap'
@@ -142,7 +142,7 @@ javacard {
 
             //noinspection GroovyAssignabilityCheck
             applet {
-                className 'applet.HelloWorldApplet'
+                className 'CryptoApplet'
                 aid '01:ff:ff:04:05:06:07:08:09:01:02'
             }
 
