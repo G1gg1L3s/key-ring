@@ -5,6 +5,7 @@ import javacard.framework.*;
 public class CryptoApplet extends Applet {
     final public static byte INS_HMAC_SHA256 = 0x25;
     final public static byte INS_AES_CTR_ENC = 0x26;
+    final public static byte INS_AES_CTR_DEC = 0x27;
     public static byte[] buffer;
 
     public static void install(byte[] bArray, short bOffset, byte bLength) {
@@ -49,7 +50,7 @@ public class CryptoApplet extends Applet {
         apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, outLengh);
     }
 
-    public void aes_ctr_encrypt(APDU apdu) {
+    public void aes_ctr(APDU apdu, boolean encrypt) {
         byte[] buffer = apdu.getBuffer();
         apdu.setIncomingAndReceive();
         // we expect a buffer with the following format:
@@ -63,11 +64,17 @@ public class CryptoApplet extends Applet {
         short dataOffset = ISO7816.OFFSET_CDATA + 34;
         short dataLength = Util.getShort(buffer, lengthOffset);
 
-        AesCtr.encrypt(
-                buffer, keyOffset,
-                buffer, nonceOffset,
-                buffer, dataOffset, dataLength
-        );
+        if (encrypt) {
+            AesCtr.encrypt(
+                    buffer, keyOffset,
+                    buffer, nonceOffset,
+                    buffer, dataOffset, dataLength);
+        } else {
+            AesCtr.decrypt(
+                    buffer, keyOffset,
+                    buffer, nonceOffset,
+                    buffer, dataOffset, dataLength);
+        }
 
         apdu.setOutgoingAndSend(dataOffset, dataLength);
     }
@@ -80,7 +87,9 @@ public class CryptoApplet extends Applet {
                 hmacSha256(apdu);
                 break;
             case INS_AES_CTR_ENC:
-                aes_ctr_encrypt(apdu);
+            case INS_AES_CTR_DEC:
+                boolean encrypt = buffer[ISO7816.OFFSET_INS] == INS_AES_CTR_ENC;
+                aes_ctr(apdu, encrypt);
                 break;
             default:
                 ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);

@@ -71,6 +71,14 @@ public class AesCtr {
         }
     }
 
+    public static void decrypt(
+            byte[] key, short keyOffset,
+            byte[] nonce, short nonceOffset,
+            byte[] data, short dataOffset, short dataLength) {
+        // Beauty of stream ciphers :)
+        encrypt(key, keyOffset, nonce, nonceOffset, data, dataOffset, dataLength);
+    }
+
     private static void incCounter() {
         for (short i = BLOCK_SIZE - 1; i >= 0; i--) {
             short offset = (short) (COUNTER_OFFSET + i);
