@@ -1,31 +1,14 @@
 package tests;
 
-import com.licel.jcardsim.smartcardio.CardSimulator;
-import com.licel.jcardsim.utils.AIDUtil;
-import crypto.HMACSha256Applet;
+import crypto.CryptoApplet;
 import crypto.Utils;
-import javacard.framework.AID;
 import org.junit.Assert;
 import org.junit.jupiter.api.*;
 
 import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
 
-public class HmacSha256Test {
-    CardSimulator card;
-    final AID aid = AIDUtil.create("F000000001");
-
-    public HmacSha256Test() {
-        card = new CardSimulator();
-        card.installApplet(aid, HMACSha256Applet.class);
-        card.selectApplet(aid);
-    }
-
-    void putShort(short a, byte[] arr, int offset) {
-        arr[offset] = (byte) ((a & 0xFF00) >> 8);
-        arr[offset + 1] = (byte) (a & 0x00FF);
-    }
-
+public class HmacSha256Test extends CryptoBase {
     void testWith(byte[] key, byte[] data, String expected) {
         byte[] apduData = new byte[2 + key.length + 2 + data.length];
         // resulting array is...
@@ -38,28 +21,11 @@ public class HmacSha256Test {
         // then data itself
         System.arraycopy(data, 0, apduData, 2 + key.length + 2, data.length);
 
-        CommandAPDU apdu = new CommandAPDU(0x00, HMACSha256Applet.INS_HMAC_SHA256, 0x00, 0x00, apduData);
+        CommandAPDU apdu = new CommandAPDU(0x00, CryptoApplet.INS_HMAC_SHA256, 0x00, 0x00, apduData);
         ResponseAPDU response = card.transmitCommand(apdu);
         byte[] raw = response.getData();
 
         Assert.assertEquals(expected, Utils.toHex(raw));
-    }
-
-    @BeforeAll
-    public static void setUpClass() throws Exception {
-    }
-
-    @AfterAll
-    public static void tearDownClass() throws Exception {
-    }
-
-    @BeforeEach
-    public void setUpMethod() throws Exception {
-
-    }
-
-    @AfterEach
-    public void tearDownMethod() throws Exception {
     }
 
     @Test

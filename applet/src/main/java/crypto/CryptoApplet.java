@@ -2,17 +2,17 @@ package crypto;
 
 import javacard.framework.*;
 
-public class HMACSha256Applet extends Applet {
+public class CryptoApplet extends Applet {
     final public static byte INS_HMAC_SHA256 = 0x25;
     public static byte[] hash_buff;
 
     public static void install(byte[] bArray, short bOffset, byte bLength) {
-        new HMACSha256Applet().register();
+        new CryptoApplet().register();
         HmacSha256.init(JCSystem.makeTransientByteArray(HmacSha256.REQUIRED_BUFFER_LENGTH, JCSystem.CLEAR_ON_DESELECT));
         hash_buff = JCSystem.makeTransientByteArray((short) 128, JCSystem.CLEAR_ON_DESELECT);
     }
 
-    public HMACSha256Applet() {
+    public CryptoApplet() {
 
     }
 
