@@ -43,4 +43,14 @@ public class Utils {
         }
         return r.toString();
     }
+
+    public static void xor(
+            byte[] src, short srcOffset,
+            byte[] dst, short dstOffset,
+            short len
+    ) {
+        for (short i = 0; i < len; i++) {
+            dst[(short) (dstOffset + i)] ^= src[(short) (srcOffset + i)];
+        }
+    }
 }
