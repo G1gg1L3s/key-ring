@@ -42,33 +42,40 @@ public class AesCtr {
             byte[] key, short keyOffset,
             byte[] nonce, short nonceOffset,
             byte[] data, short dataOffset, short dataLength) {
-        aesKey.setKey(key, keyOffset);
-        aes.init(aesKey, Cipher.MODE_ENCRYPT);
 
-        Util.arrayCopyNonAtomic(
-                nonce, nonceOffset, // src
-                buffer, COUNTER_OFFSET, // dest
-                NONCE_SIZE);
+        try {
+            aesKey.setKey(key, keyOffset);
+            aes.init(aesKey, Cipher.MODE_ENCRYPT);
 
-        short left = dataLength;
-        while (left > 0) {
-            aes.update(
-                    buffer, COUNTER_OFFSET, NONCE_SIZE, // input
-                    buffer, BLOCK_OFFSET // output
-            );
+            Util.arrayCopyNonAtomic(
+                    nonce, nonceOffset, // src
+                    buffer, COUNTER_OFFSET, // dest
+                    NONCE_SIZE);
 
-            short len = left < BLOCK_SIZE ? left : BLOCK_SIZE;
+            short left = dataLength;
+            while (left > 0) {
+                aes.update(
+                        buffer, COUNTER_OFFSET, NONCE_SIZE, // input
+                        buffer, BLOCK_OFFSET // output
+                );
 
-            Utils.xor(
-                    buffer, BLOCK_OFFSET, // src
-                    data, dataOffset, // dest
-                    len);
+                short len = left < BLOCK_SIZE ? left : BLOCK_SIZE;
 
-            dataOffset += len;
-            left -= len;
+                Utils.xor(
+                        buffer, BLOCK_OFFSET, // src
+                        data, dataOffset, // dest
+                        len);
 
-            incCounter();
+                dataOffset += len;
+                left -= len;
+
+                incCounter();
+            }
+        } finally {
+            aesKey.clearKey();
+            Util.arrayFillNonAtomic(buffer, (short) 0, (short) buffer.length, (byte) 0x00);
         }
+
     }
 
     public static void decrypt(
