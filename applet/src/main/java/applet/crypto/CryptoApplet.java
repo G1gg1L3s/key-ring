@@ -32,22 +32,11 @@ public class CryptoApplet extends Applet {
         short dataLength = Util.getShort(buffer, (short) (keyOffset + keyLength));
         short dataOffset = (short) (keyOffset + keyLength + 2);
 
-        short outLengh = HmacSha256.compute(
-                // key
-                buffer,
-                keyOffset,
-                keyLength,
+        HmacSha256.start(buffer, keyOffset, keyLength);
+        HmacSha256.update(buffer, dataOffset, dataLength);
+        short outLen = HmacSha256.finalize(buffer, ISO7816.OFFSET_CDATA);
 
-                // message
-                buffer,
-                dataOffset,
-                dataLength,
-
-                // mac
-                buffer,
-                ISO7816.OFFSET_CDATA);
-
-        apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, outLengh);
+        apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, outLen);
     }
 
     public void aes_ctr(APDU apdu, boolean encrypt) {
