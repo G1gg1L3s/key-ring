@@ -6,6 +6,8 @@ jobs:
     steps:
       - name: Checkout project
         uses: actions/checkout@v2
+        with:
+          submodules: true
 
       - name: Set up Java version
         uses: actions/setup-java@v3
