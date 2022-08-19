@@ -1,7 +1,7 @@
 package tests;
 
-import crypto.CryptoApplet;
-import crypto.Utils;
+import applet.crypto.CryptoApplet;
+import common.Utils;
 import org.junit.Assert;
 import org.junit.jupiter.api.*;
 

@@ -1,7 +1,6 @@
-package crypto;
+package common;
 
 public class Utils {
-
     public static byte[] parseHex(String s) {
         final int len = s.length();
 
@@ -42,15 +41,5 @@ public class Utils {
             r.append(hexCode[(b & 0xF)]);
         }
         return r.toString();
-    }
-
-    public static void xor(
-            byte[] src, short srcOffset,
-            byte[] dst, short dstOffset,
-            short len
-    ) {
-        for (short i = 0; i < len; i++) {
-            dst[(short) (dstOffset + i)] ^= src[(short) (srcOffset + i)];
-        }
     }
 }

@@ -8,7 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import com.licel.jcardsim.smartcardio.CardSimulator;
 import com.licel.jcardsim.utils.AIDUtil;
 
-import crypto.CryptoApplet;
+import applet.crypto.CryptoApplet;
 import javacard.framework.AID;
 
 public class CryptoBase {
