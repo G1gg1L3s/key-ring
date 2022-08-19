@@ -2,6 +2,7 @@ package applet.crypto;
 
 import javacard.framework.ISOException;
 import javacard.framework.Util;
+import javacard.security.CryptoException;
 import javacard.security.MessageDigest;
 
 public class HmacSha256 {
@@ -27,31 +28,41 @@ public class HmacSha256 {
     }
 
     public static void start(byte[] key, short keyOffset, short keyLength) {
-        // Sorry, we don't support big keys :c
-        if (keyLength > BLOCK_SIZE || keyLength < 0) {
-            ISOException.throwIt(SW_HMAC_UNSUPPORTED_KEY_LENGTH);
+        try {
+            // Sorry, we don't support big keys :c
+            if (keyLength > BLOCK_SIZE || keyLength < 0) {
+                ISOException.throwIt(SW_HMAC_UNSUPPORTED_KEY_LENGTH);
+            }
+
+            // Copy the key into the beginning of the buffer and xor producing the inner key
+            for (short i = 0; i < keyLength; i++) {
+                short k = (short) (keyOffset + i);
+                buffer[i] = (byte) (key[k] ^ 0x36);
+            }
+
+            // padd inner key to the block size
+            Util.arrayFillNonAtomic(
+                    buffer,
+                    keyLength, // offset, after the key
+                    (short) (BLOCK_SIZE - keyLength), // length, to the end of the BLOCK
+                    (byte) 0x36);
+
+            sha256.reset();
+            // write inner key
+            sha256.update(buffer, (short) 0, BLOCK_SIZE);
+        } catch (CryptoException ex) {
+            reset();
+            throw ex;
         }
-
-        // Copy the key into the beginning of the buffer and xor producing the inner key
-        for (short i = 0; i < keyLength; i++) {
-            short k = (short) (keyOffset + i);
-            buffer[i] = (byte) (key[k] ^ 0x36);
-        }
-
-        // padd inner key to the block size
-        Util.arrayFillNonAtomic(
-                buffer,
-                keyLength, // offset, after the key
-                (short) (BLOCK_SIZE - keyLength), // length, to the end of the BLOCK
-                (byte) 0x36);
-
-        sha256.reset();
-        // write inner key
-        sha256.update(buffer, (short) 0, BLOCK_SIZE);
     }
 
     public static void update(byte[] message, short messageOffset, short messageLength) {
-        sha256.update(message, messageOffset, messageLength);
+        try {
+            sha256.update(message, messageOffset, messageLength);
+        } catch (CryptoException ex) {
+            reset();
+            throw ex;
+        }
     }
 
     public static short finalize(byte[] mac, short macOffset) {
@@ -76,13 +87,16 @@ public class HmacSha256 {
 
             return HASH_SIZE;
         } finally {
-            // Zeroize the buffer
-            Util.arrayFillNonAtomic(
-                    buffer,
-                    (short) 0, // offset
-                    (short) buffer.length, // length
-                    (byte) 0x00 // byte to fill with
-            );
+            reset();
         }
+    }
+
+    public static void reset() {
+        sha256.reset();
+        // Zeroize the buffer
+        Util.arrayFillNonAtomic(
+                buffer, (short) 0, (short) buffer.length,
+                (byte) 0x00 // byte to fill with
+        );
     }
 }
