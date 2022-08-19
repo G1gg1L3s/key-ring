@@ -26,50 +26,49 @@ public class HmacSha256 {
         buffer = tmp;
     }
 
-    public static short compute(
-            byte[] key, short keyOffset, short keyLength,
-            byte[] message, short messageOffset, short messageLength,
-            byte[] mac, short macOffset) {
-
+    public static void start(byte[] key, short keyOffset, short keyLength) {
         // Sorry, we don't support big keys :c
         if (keyLength > BLOCK_SIZE || keyLength < 0) {
             ISOException.throwIt(SW_HMAC_UNSUPPORTED_KEY_LENGTH);
         }
 
+        // Copy the key into the beginning of the buffer and xor producing the inner key
+        for (short i = 0; i < keyLength; i++) {
+            short k = (short) (keyOffset + i);
+            buffer[i] = (byte) (key[k] ^ 0x36);
+        }
+
+        // padd inner key to the block size
+        Util.arrayFillNonAtomic(
+                buffer,
+                keyLength, // offset, after the key
+                (short) (BLOCK_SIZE - keyLength), // length, to the end of the BLOCK
+                (byte) 0x36);
+
+        sha256.reset();
+        // write inner key
+        sha256.update(buffer, (short) 0, BLOCK_SIZE);
+    }
+
+    public static void update(byte[] message, short messageOffset, short messageLength) {
+        sha256.update(message, messageOffset, messageLength);
+    }
+
+    public static short finalize(byte[] mac, short macOffset) {
         try {
-            // compute inner hash
-            for (short i = 0; i < keyLength; i++) {
-                short k = (short) (keyOffset + i);
-                buffer[i] = (byte) (key[k] ^ 0x36);
-            }
-
-            // padd inner key to the block size
-            Util.arrayFillNonAtomic(
-                    buffer,
-                    keyLength, // offset, after the key
-                    (short) (BLOCK_SIZE - keyLength), // length, to the end of the BLOCK
-                    (byte) 0x36);
-
-            sha256.reset();
-            // write inner key
-            sha256.update(buffer, (short) 0, BLOCK_SIZE);
-
-            // and then the message
+            // write hash after the key in buffer
             sha256.doFinal(
-                    message,
-                    messageOffset,
-                    messageLength,
+                    // src
+                    buffer, (short)0, (short)0,
                     buffer, // output
                     BLOCK_SIZE // output offset; the hash will be after the inner key
             );
 
             // compute outer key
-            for (short i = 0; i < keyLength; i++) {
-                short k = (short) (keyOffset + i);
-                buffer[i] = (byte) (key[k] ^ 0x5c);
+            for (short i = 0; i < BLOCK_SIZE; i++) {
+                // (key xor 0x36) xor 0x36 xor 0x5c = key xor 0x5c
+                buffer[i] ^= 0x36 ^ 0x5c;
             }
-            // pad outer key
-            Util.arrayFillNonAtomic(buffer, keyLength, (short) (BLOCK_SIZE - keyLength), (byte) 0x5c);
 
             sha256.reset();
             // compute hash from the `outer key || hash`
