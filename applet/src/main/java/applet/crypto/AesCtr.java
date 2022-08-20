@@ -27,7 +27,7 @@ public class AesCtr {
     public static void init(byte[] buff) {
         buffer = buff;
         aesKey = (AESKey) KeyBuilder.buildKey(
-                KeyBuilder.TYPE_AES,
+                KeyBuilder.TYPE_AES_TRANSIENT_DESELECT,
                 KeyBuilder.LENGTH_AES_128,
                 false // key encryption; if true returns object with javacardx.crypto.KeyEncryption
                       // which is not needed for now
