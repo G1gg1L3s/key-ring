@@ -7,6 +7,8 @@ public class CryptoApplet extends Applet {
     final public static byte INS_AES_CTR_ENC = 0x26;
     final public static byte INS_AES_CTR_DEC = 0x27;
     final public static byte INS_RAND = 0x28;
+    final public static byte INS_AEAD_SEAL = 0x29;
+    final public static byte INS_AEAD_OPEN = 0x30;
     public static byte[] buffer;
 
     public static void install(byte[] bArray, short bOffset, byte bLength) {
@@ -15,8 +17,8 @@ public class CryptoApplet extends Applet {
         AesCtr.init(JCSystem.makeTransientByteArray(AesCtr.REQUIRED_BUFFER_LENGTH, JCSystem.CLEAR_ON_DESELECT));
         Rng.init(
                 new byte[Rng.SEED_SIZE],
-                JCSystem.makeTransientByteArray(Rng.REQUIRED_BUFFER_SIZE, JCSystem.CLEAR_ON_DESELECT)
-        );
+                JCSystem.makeTransientByteArray(Rng.REQUIRED_BUFFER_SIZE, JCSystem.CLEAR_ON_DESELECT));
+        AEAD.init(JCSystem.makeTransientByteArray(AEAD.REQUIRED_BUFFER_SIZE, JCSystem.CLEAR_ON_DESELECT));
         buffer = JCSystem.makeTransientByteArray((short) 1024, JCSystem.CLEAR_ON_DESELECT);
     }
 
@@ -90,6 +92,37 @@ public class CryptoApplet extends Applet {
         apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, len);
     }
 
+    public void aead(APDU apdu, boolean seal) {
+        byte[] buffer = apdu.getBuffer();
+        apdu.setIncomingAndReceive();
+
+        // we expect the following format:
+        //
+        // [48-byte key] [2-byte ad length] [ad] [2-byte data length] [data]
+        //
+        short keyOffset = ISO7816.OFFSET_CDATA;
+        short adLenOffset = (short) (keyOffset + AEAD.KEY_SIZE);
+        short adLen = Util.getShort(buffer, adLenOffset);
+        short adOffset = (short) (adLenOffset + 2);
+        short dataLenOffset = (short) (adOffset + adLen);
+        short dataLen = Util.getShort(buffer, dataLenOffset);
+        short dataOffset = (short) (dataLenOffset + 2);
+
+        short len = 0;
+
+        if (seal) {
+            ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
+        } else {
+            len = AEAD.open(
+                    buffer, keyOffset, // key
+                    buffer, dataOffset, dataLen, // ciphertext
+                    buffer, adOffset, adLen // associated data
+            );
+        }
+
+        apdu.setOutgoingAndSend(dataOffset, len);
+    }
+
     public void process(APDU apdu) {
         byte[] buffer = apdu.getBuffer();
 
@@ -98,13 +131,20 @@ public class CryptoApplet extends Applet {
                 hmacSha256(apdu);
                 break;
             case INS_AES_CTR_ENC:
-            case INS_AES_CTR_DEC:
+            case INS_AES_CTR_DEC: {
                 boolean encrypt = buffer[ISO7816.OFFSET_INS] == INS_AES_CTR_ENC;
                 aes_ctr(apdu, encrypt);
                 break;
+            }
             case INS_RAND:
                 rand(apdu);
                 break;
+            case INS_AEAD_SEAL:
+            case INS_AEAD_OPEN: {
+                boolean seal = buffer[ISO7816.OFFSET_INS] == INS_AEAD_SEAL;
+                aead(apdu, seal);
+                break;
+            }
             default:
                 ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
                 break;

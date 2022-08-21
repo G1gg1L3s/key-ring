@@ -15,6 +15,8 @@ public class CryptoBase {
     protected CardSimulator card;
     protected final AID aid = AIDUtil.create("F000000001");
 
+    public static final int SW_SUCCESS = 0x9000;
+
     public CryptoBase() {
         card = new CardSimulator();
         card.installApplet(aid, CryptoApplet.class);
