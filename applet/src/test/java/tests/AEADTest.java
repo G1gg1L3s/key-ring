@@ -1,5 +1,6 @@
 package tests;
 
+import applet.crypto.AEAD;
 import applet.crypto.CryptoApplet;
 import common.Utils;
 import org.junit.Assert;
@@ -10,7 +11,7 @@ import javax.smartcardio.ResponseAPDU;
 import java.security.SecureRandom;
 
 public class AEADTest extends CryptoBase {
-    byte[] aead(short ins, byte[] key, byte[] ad, byte[]data) {
+    ResponseAPDU aeadRaw(short ins, byte[] key, byte[] ad, byte[] data) {
         int keyOffset = 0;
         int adLenOffset = key.length;
         int adOffset = adLenOffset + 2;
@@ -32,8 +33,13 @@ public class AEADTest extends CryptoBase {
 
         CommandAPDU apdu = new CommandAPDU(0x00, ins, 0x00, 0x00, apduData);
         ResponseAPDU response = card.transmitCommand(apdu);
-        Assert.assertEquals(SW_SUCCESS, response.getSW());
-        return response.getData();
+        return response;
+    }
+
+    byte[] aead(short ins, byte[] key, byte[] ad, byte[] data) {
+        ResponseAPDU res = aeadRaw(ins, key, ad, data);
+        Assert.assertEquals(SW_SUCCESS, res.getSW());
+        return res.getData();
     }
 
     byte[] open(String keyHex, String hexCt, String ad) {
@@ -158,39 +164,81 @@ public class AEADTest extends CryptoBase {
         encryptDecrypt("", "biiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiig");
     }
 
-
     @Test
     void encryptDecryptSmallPlaintextEmptyAD() {
         encryptDecrypt("small", "");
     }
-
 
     @Test
     void encryptDecryptSmallPlaintextSmallAD() {
         encryptDecrypt("small", "smallish");
     }
 
-
     @Test
     void encryptDecryptSmallPlaintextBigAD() {
         encryptDecrypt("small", "biiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiig");
     }
-
 
     @Test
     void encryptDecryptBigPlaintextEmptyAD() {
         encryptDecrypt("BIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIG", "");
     }
 
-
     @Test
     void encryptDecryptBigPlaintextSmallAD() {
         encryptDecrypt("BIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIG", "small");
     }
 
-
     @Test
     void encryptDecryptBigPlaintextBigAD() {
         encryptDecrypt("BIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIG", "huuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuge");
+    }
+
+    @Test
+    void encryptFlipByteDecrypt() {
+        SecureRandom random = new SecureRandom();
+        byte[] key = random.generateSeed(48);
+        String keyHex = Utils.toHex(key);
+
+        String ad = "Some data";
+        byte[] ct = seal(keyHex, "Something secret", ad);
+
+        ct[1]++;
+
+        ResponseAPDU res = aeadRaw(CryptoApplet.INS_AEAD_OPEN, key, ad.getBytes(), ct);
+
+        Assert.assertEquals(AEAD.AUTHENTICATION_ERROR, res.getSW());
+    }
+
+    @Test
+    void encryptFlipTagDecrypt() {
+        SecureRandom random = new SecureRandom();
+        byte[] key = random.generateSeed(48);
+        String keyHex = Utils.toHex(key);
+
+        String ad = "Some data";
+        byte[] ct = seal(keyHex, "Something secret", ad);
+
+        ct[ct.length - 1]++;
+
+        ResponseAPDU res = aeadRaw(CryptoApplet.INS_AEAD_OPEN, key, ad.getBytes(), ct);
+
+        Assert.assertEquals(AEAD.AUTHENTICATION_ERROR, res.getSW());
+    }
+
+    @Test
+    void encryptFlipNonceDecrypt() {
+        SecureRandom random = new SecureRandom();
+        byte[] key = random.generateSeed(48);
+        String keyHex = Utils.toHex(key);
+
+        String ad = "Some data";
+        byte[] ct = seal(keyHex, "Something secret", ad);
+
+        ct[ct.length - 20]++;
+
+        ResponseAPDU res = aeadRaw(CryptoApplet.INS_AEAD_OPEN, key, ad.getBytes(), ct);
+
+        Assert.assertEquals(AEAD.AUTHENTICATION_ERROR, res.getSW());
     }
 }
