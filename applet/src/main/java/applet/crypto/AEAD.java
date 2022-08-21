@@ -72,6 +72,39 @@ public class AEAD {
         return TAG_SIZE;
     }
 
+    public static short seal(
+            byte[] key, short keyOffset,
+            byte[] plaintext, short plainOffset, short plainLen,
+            byte[] ad, short adOffset, short adLen) {
+        // 1. Generate nonce. Place it after the ciphertext
+        short nonceOffset = (short) (plainOffset + plainLen);
+        Rng.fill(plaintext, nonceOffset, NONCE_SIZE);
+
+        // 2. Split keys
+        short encKeyOffset = keyOffset;
+        short tagKeyOffset = (short) (keyOffset + AesCtr.KEY_SIZE);
+
+        // 3. Encrypt
+        AesCtr.encrypt(
+                key, encKeyOffset,
+                plaintext, nonceOffset,
+                plaintext, plainOffset, plainLen);
+
+        // We also want to protect the nonce
+        short ciphertextLen = (short) (plainLen + NONCE_SIZE);
+
+        // 4. Derive tag
+        short tagOffset = (short) (nonceOffset + NONCE_SIZE);
+        calculateTag(
+                key, tagKeyOffset, HmacSha256.HMAC_SIZE, // tag key
+                ad, adOffset, adLen, // associated data
+                plaintext, plainOffset, ciphertextLen, // ciphertext
+                plaintext, tagOffset // place tag after the ciphertext
+        );
+
+        return (short) (plainLen + ADDITIONAL_DATA_SIZE);
+    }
+
     public static short open(
             byte[] key, short keyOffset,
             byte[] ciphertext, short cipherOffset, short cipherLen,

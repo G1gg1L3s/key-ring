@@ -111,7 +111,11 @@ public class CryptoApplet extends Applet {
         short len = 0;
 
         if (seal) {
-            ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
+            len = AEAD.seal(
+                    buffer, keyOffset, // key
+                    buffer, dataOffset, dataLen, // plaintext
+                    buffer, adOffset, adLen // associated data
+            );
         } else {
             len = AEAD.open(
                     buffer, keyOffset, // key
