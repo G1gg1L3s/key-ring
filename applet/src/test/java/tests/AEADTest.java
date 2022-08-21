@@ -7,35 +7,45 @@ import org.junit.jupiter.api.*;
 
 import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
+import java.security.SecureRandom;
 
 public class AEADTest extends CryptoBase {
-    byte[] open(String keyHex, String hexCt, String ad) {
-        byte[] key = Utils.parseHex(keyHex);
-        byte[] data = Utils.parseHex(hexCt);
-
+    byte[] aead(short ins, byte[] key, byte[] ad, byte[]data) {
         int keyOffset = 0;
         int adLenOffset = key.length;
         int adOffset = adLenOffset + 2;
-        int dataLenOffset = adOffset + ad.length();
+        int dataLenOffset = adOffset + ad.length;
         int dataOffset = dataLenOffset + 2;
 
-        byte[] apduData = new byte[48 + 2 + ad.length() + 2 + data.length];
+        byte[] apduData = new byte[48 + 2 + ad.length + 2 + data.length];
         // resulting array is...
         // 48 byte key
         System.arraycopy(key, 0, apduData, keyOffset, key.length);
         // then 2 byte length of associated data
-        putShort((short) ad.length(), apduData, adLenOffset);
+        putShort((short) ad.length, apduData, adLenOffset);
         // then associated data itself
-        System.arraycopy(ad.getBytes(), 0, apduData, adOffset, ad.length());
+        System.arraycopy(ad, 0, apduData, adOffset, ad.length);
         // then 2-byte data length
         putShort((short) data.length, apduData, dataLenOffset);
         // then data itself
         System.arraycopy(data, 0, apduData, dataOffset, data.length);
 
-        CommandAPDU apdu = new CommandAPDU(0x00, CryptoApplet.INS_AEAD_OPEN, 0x00, 0x00, apduData);
+        CommandAPDU apdu = new CommandAPDU(0x00, ins, 0x00, 0x00, apduData);
         ResponseAPDU response = card.transmitCommand(apdu);
         Assert.assertEquals(SW_SUCCESS, response.getSW());
         return response.getData();
+    }
+
+    byte[] open(String keyHex, String hexCt, String ad) {
+        byte[] key = Utils.parseHex(keyHex);
+        byte[] data = Utils.parseHex(hexCt);
+
+        return aead(CryptoApplet.INS_AEAD_OPEN, key, ad.getBytes(), data);
+    }
+
+    byte[] seal(String keyHex, String plaintext, String ad) {
+        byte[] key = Utils.parseHex(keyHex);
+        return aead(CryptoApplet.INS_AEAD_SEAL, key, ad.getBytes(), plaintext.getBytes());
     }
 
     @Test
@@ -120,5 +130,67 @@ public class AEADTest extends CryptoBase {
                 "biiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiig");
         Assert.assertEquals("looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong",
                 new String(plaintext));
+    }
+
+    void encryptDecrypt(String text, String ad) {
+        SecureRandom random = new SecureRandom();
+        byte[] key = random.generateSeed(48);
+        String keyHex = Utils.toHex(key);
+
+        byte[] ct = seal(keyHex, text, ad);
+        byte[] pt = open(keyHex, Utils.toHex(ct), ad);
+
+        Assert.assertEquals(text, new String(pt));
+    }
+
+    @Test
+    void encryptDecryptEmptyPlaintextEmptyAD() {
+        encryptDecrypt("", "");
+    }
+
+    @Test
+    void encryptDecryptEmptyPlaintextSmallAD() {
+        encryptDecrypt("", "small");
+    }
+
+    @Test
+    void encryptDecryptEmptyPlaintextBigAD() {
+        encryptDecrypt("", "biiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiig");
+    }
+
+
+    @Test
+    void encryptDecryptSmallPlaintextEmptyAD() {
+        encryptDecrypt("small", "");
+    }
+
+
+    @Test
+    void encryptDecryptSmallPlaintextSmallAD() {
+        encryptDecrypt("small", "smallish");
+    }
+
+
+    @Test
+    void encryptDecryptSmallPlaintextBigAD() {
+        encryptDecrypt("small", "biiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiig");
+    }
+
+
+    @Test
+    void encryptDecryptBigPlaintextEmptyAD() {
+        encryptDecrypt("BIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIG", "");
+    }
+
+
+    @Test
+    void encryptDecryptBigPlaintextSmallAD() {
+        encryptDecrypt("BIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIG", "small");
+    }
+
+
+    @Test
+    void encryptDecryptBigPlaintextBigAD() {
+        encryptDecrypt("BIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIG", "huuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuge");
     }
 }
