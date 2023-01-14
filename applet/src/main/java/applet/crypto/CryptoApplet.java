@@ -9,6 +9,7 @@ public class CryptoApplet extends Applet {
     final public static byte INS_RAND = 0x28;
     final public static byte INS_AEAD_SEAL = 0x29;
     final public static byte INS_AEAD_OPEN = 0x30;
+    final public static byte INS_HKDF_HMAC_SHA256 = 0x3a;
     final public static byte INS_P256_GENERATE_NEW_KEYPAIR = 0x41;
     final public static byte INS_P256_ECDH = 0x42;
     public static byte[] buffer;
@@ -21,6 +22,7 @@ public class CryptoApplet extends Applet {
         AEAD.init(JCSystem.makeTransientByteArray(AEAD.REQUIRED_BUFFER_SIZE, JCSystem.CLEAR_ON_DESELECT));
         buffer = JCSystem.makeTransientByteArray((short) 1024, JCSystem.CLEAR_ON_DESELECT);
         P256.init();
+        HKDF.setBuffer(JCSystem.makeTransientByteArray(HKDF.REQUIRED_BUFFER_SIZE, JCSystem.CLEAR_ON_DESELECT), (short)0);
     }
 
     public CryptoApplet() {
@@ -122,6 +124,34 @@ public class CryptoApplet extends Applet {
         apdu.setOutgoingAndSend(dataOffset, len);
     }
 
+    private void hkdf(APDU apdu) {
+        apdu.setIncomingAndReceive();
+
+        byte[] buffer = apdu.getBuffer();
+        short cdata = apdu.getOffsetCdata();
+        // All lengths are 1 byte
+        // [salt len] [info len] [key len] [output len] [salt] [info] [...key]
+        short saltLen = buffer[cdata];
+        short infoLen = buffer[(short)(cdata + 1)];
+        short keyLen = buffer[(short)(cdata + 2)];
+        short outputLen = buffer[(short)(cdata + 3)];
+
+        short saltOffset = (short)(cdata + 4);
+        short infoOffset = (short)(saltOffset + saltLen);
+        short keyOffset = (short)(infoOffset + infoLen);
+
+        HKDF.startExtract(buffer, saltOffset, saltLen);
+        HKDF.extractUpdate(buffer, keyOffset, keyLen);
+        HKDF.extractFinish();
+
+        // Place the result after info at `keyOffset`
+        // Because info cannot be overwritten as it is used in every iteration
+        HKDF.expand(buffer, infoOffset, infoLen, buffer, keyOffset, outputLen);
+
+        HKDF.clean();
+        apdu.setOutgoingAndSend(keyOffset, outputLen);
+    }
+
     public void process(APDU apdu) {
         byte[] buffer = apdu.getBuffer();
 
@@ -144,6 +174,9 @@ public class CryptoApplet extends Applet {
                 aead(apdu, seal);
                 break;
             }
+            case INS_HKDF_HMAC_SHA256:
+                hkdf(apdu);
+                break;
             case INS_P256_GENERATE_NEW_KEYPAIR: {
 
                 apdu.setIncomingAndReceive();
