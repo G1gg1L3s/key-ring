@@ -1,5 +1,6 @@
 package tests;
 
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -11,6 +12,8 @@ import com.licel.jcardsim.utils.AIDUtil;
 import applet.crypto.CryptoApplet;
 import javacard.framework.AID;
 
+import java.security.Security;
+
 public class CryptoBase {
     protected CardSimulator card;
     protected final AID aid = AIDUtil.create("F000000001");
@@ -21,6 +24,8 @@ public class CryptoBase {
         card = new CardSimulator();
         card.installApplet(aid, CryptoApplet.class);
         card.selectApplet(aid);
+
+        Security.addProvider(new BouncyCastleProvider());
     }
 
     void putShort(short a, byte[] arr, int offset) {
