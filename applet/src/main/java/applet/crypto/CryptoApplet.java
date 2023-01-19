@@ -13,7 +13,7 @@ public class CryptoApplet extends Applet {
 
     public static void install(byte[] bArray, short bOffset, byte bLength) {
         new CryptoApplet().register();
-        HmacSha256.init();
+        HmacSha256.init(JCSystem.makeTransientByteArray(HmacSha256.REQUIRED_BUFFER_LENGTH, JCSystem.CLEAR_ON_DESELECT));
         AesCtr.init(JCSystem.makeTransientByteArray(AesCtr.REQUIRED_BUFFER_LENGTH, JCSystem.CLEAR_ON_DESELECT));
         Rng.init(
                 new byte[Rng.SEED_SIZE],
