@@ -15,21 +15,13 @@ public class CryptoApplet extends Applet {
         new CryptoApplet().register();
         HmacSha256.init(JCSystem.makeTransientByteArray(HmacSha256.REQUIRED_BUFFER_LENGTH, JCSystem.CLEAR_ON_DESELECT));
         AesCtr.init(JCSystem.makeTransientByteArray(AesCtr.REQUIRED_BUFFER_LENGTH, JCSystem.CLEAR_ON_DESELECT));
-        Rng.init(
-                new byte[Rng.SEED_SIZE],
-                JCSystem.makeTransientByteArray(Rng.REQUIRED_BUFFER_SIZE, JCSystem.CLEAR_ON_DESELECT));
+        Rng.init();
         AEAD.init(JCSystem.makeTransientByteArray(AEAD.REQUIRED_BUFFER_SIZE, JCSystem.CLEAR_ON_DESELECT));
         buffer = JCSystem.makeTransientByteArray((short) 1024, JCSystem.CLEAR_ON_DESELECT);
     }
 
     public CryptoApplet() {
 
-    }
-
-    @Override
-    public boolean select() {
-        Rng.reseed();
-        return true;
     }
 
     public void hmacSha256(APDU apdu) {
