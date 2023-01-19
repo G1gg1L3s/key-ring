@@ -9,6 +9,8 @@ public class CryptoApplet extends Applet {
     final public static byte INS_RAND = 0x28;
     final public static byte INS_AEAD_SEAL = 0x29;
     final public static byte INS_AEAD_OPEN = 0x30;
+    final public static byte INS_P256_GENERATE_NEW_KEYPAIR = 0x41;
+    final public static byte INS_P256_ECDH = 0x42;
     public static byte[] buffer;
 
     public static void install(byte[] bArray, short bOffset, byte bLength) {
@@ -18,6 +20,7 @@ public class CryptoApplet extends Applet {
         Rng.init();
         AEAD.init(JCSystem.makeTransientByteArray(AEAD.REQUIRED_BUFFER_SIZE, JCSystem.CLEAR_ON_DESELECT));
         buffer = JCSystem.makeTransientByteArray((short) 1024, JCSystem.CLEAR_ON_DESELECT);
+        P256.init();
     }
 
     public CryptoApplet() {
@@ -139,6 +142,21 @@ public class CryptoApplet extends Applet {
             case INS_AEAD_OPEN: {
                 boolean seal = buffer[ISO7816.OFFSET_INS] == INS_AEAD_SEAL;
                 aead(apdu, seal);
+                break;
+            }
+            case INS_P256_GENERATE_NEW_KEYPAIR: {
+
+                apdu.setIncomingAndReceive();
+                P256.generateNewKeypair();
+                short len = P256.publicKey(buffer, (short)0);
+                apdu.setOutgoingAndSend((short)0, len);
+                break;
+            }
+            case INS_P256_ECDH: {
+                short len = apdu.setIncomingAndReceive();
+                short resLen = P256.ecdh(buffer, apdu.getOffsetCdata(), len, buffer, (short)0);
+                P256.clean();
+                apdu.setOutgoingAndSend((short)0, resLen);
                 break;
             }
             default:
