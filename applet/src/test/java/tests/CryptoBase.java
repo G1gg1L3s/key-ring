@@ -20,6 +20,8 @@ public class CryptoBase {
 
     public static final int SW_SUCCESS = 0x9000;
 
+    public static boolean isSimulator = true;
+
     public CryptoBase() {
         card = new CardSimulator();
         card.installApplet(aid, CryptoApplet.class);

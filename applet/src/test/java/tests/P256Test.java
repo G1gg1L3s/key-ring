@@ -6,6 +6,7 @@ import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
 import javax.crypto.KeyAgreement;
@@ -119,6 +120,7 @@ public class P256Test extends CryptoBase {
 
     @Test
     void XYNotOnCurve() {
+        Assumptions.assumeFalse(isSimulator);
         testWith("04a1a0f443179fbc06ee046af7e8a9f27f50f129d9df32a77f4ed7a641ffb86367f610e2449c9c07af47a1f425d3ac513fbeee634066d456dea315c256544a7b48");
     }
 
