@@ -1,7 +1,8 @@
 package applet.crypto;
 
+import javacard.framework.CardRuntimeException;
+import javacard.framework.ISOException;
 import javacard.framework.Util;
-import javacard.security.CryptoException;
 
 // Authenticated encryption with associated data;
 // The Underlying algorithm is aes-128-ctr-hmac-256-128
@@ -110,7 +111,7 @@ public class AEAD {
             byte[] ciphertext, short cipherOffset, short cipherLen,
             byte[] ad, short adOffset, short adLen) {
         if (cipherLen < ADDITIONAL_DATA_SIZE) {
-            CryptoException.throwIt(CIPHERTEXT_TOO_SMALL);
+            ISOException.throwIt(CIPHERTEXT_TOO_SMALL);
         }
         // payloadLen is length of the actual data
         short payloadLen = (short) (cipherLen - ADDITIONAL_DATA_SIZE);
@@ -131,7 +132,7 @@ public class AEAD {
 
         boolean eq = Utils.const_eq(buffer, HMAC_OUTPUT_OFFSET, ciphertext, tagOffset, TAG_SIZE);
         if (!eq) {
-            CryptoException.throwIt(AUTHENTICATION_ERROR);
+            ISOException.throwIt(AUTHENTICATION_ERROR);
         }
 
         AesCtr.decrypt(
