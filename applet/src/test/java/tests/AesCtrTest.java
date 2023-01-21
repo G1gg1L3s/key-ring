@@ -9,15 +9,15 @@ import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
 
 public class AesCtrTest extends CryptoBase {
-    void testEncrypt(String keyHex, String nonceHex, String dataHex, String expectedHex) {
+    void testEncrypt(String keyHex, String nonceHex, String dataHex, String expectedHex) throws Exception {
         testIns(CryptoApplet.INS_AES_CTR_ENC, keyHex, nonceHex, dataHex, expectedHex);
     }
 
-    void testDecrypt(String keyHex, String nonceHex, String dataHex, String expectedHex) {
+    void testDecrypt(String keyHex, String nonceHex, String dataHex, String expectedHex) throws Exception {
         testIns(CryptoApplet.INS_AES_CTR_DEC, keyHex, nonceHex, dataHex, expectedHex);
     }
 
-    void testIns(byte ins, String keyHex, String nonceHex, String dataHex, String expectedHex) {
+    void testIns(byte ins, String keyHex, String nonceHex, String dataHex, String expectedHex) throws Exception {
         byte[] key = Utils.parseHex(keyHex);
         byte[] nonce = Utils.parseHex(nonceHex);
         byte[] data = Utils.parseHex(dataHex);
@@ -34,14 +34,14 @@ public class AesCtrTest extends CryptoBase {
         System.arraycopy(data, 0, apduData, 34, data.length);
 
         CommandAPDU apdu = new CommandAPDU(0x00, ins, 0x00, 0x00, apduData);
-        ResponseAPDU response = card.transmitCommand(apdu);
+        ResponseAPDU response = card.transmit(apdu);
         byte[] raw = response.getData();
 
         Assert.assertEquals(expectedHex, Utils.toHex(raw));
     }
 
     @Test
-    public void simple() {
+    public void simple() throws Exception {
         testEncrypt(
                 "00112233445566778899aabbccddeeff",
                 "ffeeddccbbaa99887766554433221100",
@@ -56,7 +56,7 @@ public class AesCtrTest extends CryptoBase {
     }
 
     @Test
-    public void empty() {
+    public void empty() throws Exception {
         testEncrypt(
                 "00112233445566778899aabbccddeeff",
                 "ffeeddccbbaa99887766554433221100",
@@ -71,7 +71,7 @@ public class AesCtrTest extends CryptoBase {
     }
 
     @Test
-    public void oneByte() {
+    public void oneByte() throws Exception {
         testEncrypt(
                 "00112233445566778899aabbccddeeff",
                 "ffeeddccbbaa99887766554433221100",
@@ -86,7 +86,7 @@ public class AesCtrTest extends CryptoBase {
     }
 
     @Test
-    public void oneLessThanBlockSize() {
+    public void oneLessThanBlockSize() throws Exception {
         testEncrypt(
                 "00112233445566778899aabbccddeeff",
                 "ffeeddccbbaa99887766554433221100",
@@ -101,7 +101,7 @@ public class AesCtrTest extends CryptoBase {
     }
 
     @Test
-    public void overflowCounter() {
+    public void overflowCounter() throws Exception {
         testEncrypt(
                 "00112233445566778899aabbccddeeff",
                 "fffffffffffffffffffffffffffffffa",
