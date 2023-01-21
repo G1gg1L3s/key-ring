@@ -27,18 +27,18 @@ public class P256Test extends CryptoBase {
     public static final int SW_UNKNOWN = 0x6f00;
 
 
-    ResponseAPDU generateNewKeypair() {
+    ResponseAPDU generateNewKeypair() throws Exception {
         CommandAPDU apdu = new CommandAPDU(0x00, CryptoApplet.INS_P256_GENERATE_NEW_KEYPAIR, 0x00, 0x00, new byte[] {});
-        return card.transmitCommand(apdu);
+        return card.transmit(apdu);
     }
 
-    ResponseAPDU ecdh(byte[] pubkey) {
+    ResponseAPDU ecdh(byte[] pubkey) throws Exception {
         CommandAPDU apdu = new CommandAPDU(0x00, CryptoApplet.INS_P256_ECDH, 0x00, 0x00, pubkey);
-        return card.transmitCommand(apdu);
+        return card.transmit(apdu);
     }
 
     @Test
-    void generateKeyPairTest() throws InvalidKeySpecException, NoSuchAlgorithmException, NoSuchProviderException {
+    void generateKeyPairTest() throws Exception {
         ResponseAPDU response = generateNewKeypair();
         Assert.assertEquals(SW_SUCCESS, response.getSW());
         byte[] encoded = response.getData();
@@ -48,7 +48,7 @@ public class P256Test extends CryptoBase {
     }
 
     @Test
-    void ecdhTest() throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException, InvalidKeySpecException, InvalidKeyException {
+    void ecdhTest() throws Exception {
         KeyPairGenerator keyGen = KeyPairGenerator.getInstance("ECDH", "BC");
         ECParameterSpec ecSpec = getParameterSpec();
         keyGen.initialize(ecSpec, new SecureRandom());
@@ -82,7 +82,7 @@ public class P256Test extends CryptoBase {
         Assert.assertEquals(Utils.toHex(aliceShared), Utils.toHex(bobShared));
     }
 
-    void testWith(String maliciousPublicKey) {
+    void testWith(String maliciousPublicKey) throws Exception {
         ResponseAPDU response = generateNewKeypair();
         Assert.assertEquals(SW_SUCCESS, response.getSW());
 
@@ -93,34 +93,34 @@ public class P256Test extends CryptoBase {
     }
 
     @Test
-    void XEqualPCompressed() {
+    void XEqualPCompressed() throws Exception {
         testWith("03ffffffff00000001000000000000000000000000ffffffffffffffffffffffff");
     }
 
     @Test
-    void XYEqualP() {
+    void XYEqualP() throws Exception {
         testWith("04ffffffff00000001000000000000000000000000ffffffffffffffffffffffffffffffff00000001000000000000000000000000ffffffffffffffffffffffff");
     }
 
 
     @Test
-    void XGreaterThanPCompressed() {
+    void XGreaterThanPCompressed() throws Exception {
         testWith("02ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
     }
 
     @Test
-    void XYGreaterThanP() {
+    void XYGreaterThanP() throws Exception {
         testWith("04ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
     }
 
     @Test
-    void XNotOnCurveCompressed() {
+    void XNotOnCurveCompressed() throws Exception {
         testWith("02ae2336ae573e1418b544cf930b37c0c57bf047096aa7218b5786ec8ef53a228e");
     }
 
     @Test
-    void XYNotOnCurve() {
-        Assumptions.assumeFalse(isSimulator);
+    void XYNotOnCurve() throws Exception {
+        Assumptions.assumeFalse(simulated);
         testWith("04a1a0f443179fbc06ee046af7e8a9f27f50f129d9df32a77f4ed7a641ffb86367f610e2449c9c07af47a1f425d3ac513fbeee634066d456dea315c256544a7b48");
     }
 
