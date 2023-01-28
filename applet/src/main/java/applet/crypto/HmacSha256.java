@@ -52,7 +52,7 @@ public class HmacSha256 {
             // write inner key
             sha256.update(buffer, (short) 0, BLOCK_SIZE);
         } catch (CryptoException ex) {
-            reset();
+            clean();
             throw ex;
         }
     }
@@ -61,7 +61,7 @@ public class HmacSha256 {
         try {
             sha256.update(message, messageOffset, messageLength);
         } catch (CryptoException ex) {
-            reset();
+            clean();
             throw ex;
         }
     }
@@ -88,11 +88,11 @@ public class HmacSha256 {
 
             return HASH_SIZE;
         } finally {
-            reset();
+            clean();
         }
     }
 
-    public static void reset() {
+    public static void clean() {
         sha256.reset();
         // Zeroize the buffer
         Util.arrayFillNonAtomic(
