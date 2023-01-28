@@ -46,6 +46,7 @@ public class CryptoApplet extends Applet {
         HmacSha256.update(buffer, dataOffset, dataLength);
         short outLen = HmacSha256.finalize(buffer, ISO7816.OFFSET_CDATA);
 
+        HmacSha256.reset();
         apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, outLen);
     }
 
