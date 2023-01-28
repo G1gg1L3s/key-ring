@@ -76,6 +76,6 @@ public class HKDF {
 
     public static void clean() {
         Util.arrayFillNonAtomic(buf, bufOffset, REQUIRED_BUFFER_SIZE, (byte)0x17);
-        // TODO: zeroize hmacSha256. Right now it gives an exception.
+//        HmacSha256.reset();
     }
 }
