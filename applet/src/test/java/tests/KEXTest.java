@@ -61,7 +61,6 @@ public class KEXTest extends CryptoBase {
     ResponseAPDU confirm(byte[] tag) throws Exception {
         CommandAPDU apdu = new CommandAPDU(0x00, CryptoApplet.INS_KEX_CONFIRM, 0x00, 0x00, tag);
         ResponseAPDU res = card.transmit(apdu);
-        Assert.assertEquals(Integer.toHexString(SW_SUCCESS), Integer.toHexString(res.getSW()));
         return res;
     }
 
@@ -164,7 +163,9 @@ public class KEXTest extends CryptoBase {
         byte[] tagA = hmacSha256(keys.authKeyA, transcript);
 
         byte[] tagBExpected = hmacSha256(keys.authKeyB, transcript);
-        byte[] tagBReceived = confirm(tagA).getData();
+        ResponseAPDU tagB = confirm(tagA);
+        Assert.assertEquals(Integer.toHexString(SW_SUCCESS), Integer.toHexString(tagB.getSW()));
+        byte[] tagBReceived = tagB.getData();
 
         // NOTE: this operation is UNSAFE. Comparing secrets should be in constant time
         // manner
@@ -173,6 +174,92 @@ public class KEXTest extends CryptoBase {
         byte[] sharedSecretReceived = sharedSecret().getData();
         Assertions.assertEquals(Utils.toHex(keys.sharedSecret), Utils.toHex(sharedSecretReceived));
 
+        clean();
+    }
+
+    @Test
+    void presharedKeyIsWrong() throws Exception {
+        byte[] aliceId = Utils.parseHex("f87165e305b0f7c4824d3806434f9d09");
+        byte[] bobId = Utils.parseHex("1a1707bb54e5fb4deddd19f07adcb4f1");
+        byte[] context = Utils.parseHex("d180d183d181d0bdd19620d0bfd196d0b7d0b4d0b0");
+        byte[] presharedKeyAlice = Utils.parseHex("9060c103d4f27cd1ac4d3c6eb0a979db41f86003b0fffa32c6f96813aba55737");
+        byte[] presharedKeyBob = Utils.parseHex("9060c103d3f27cd1ac4d3c6eb0a979db41f86003b0fffa32c6f96813aba55737");
+        byte[] salt = Utils.parseHex("");
+
+        KeyPair alice = newKeyPair();
+        byte[] alicePub = encodePublic(alice);
+
+        TranscriptBuilder transcriptBuilder = new TranscriptBuilder()
+                .append(aliceId)
+                .append(bobId)
+                .append(alicePub);
+
+        start(aliceId, bobId);
+
+        ResponseAPDU exchangeResponse = exchange(alicePub);
+
+        transcriptBuilder.append(exchangeResponse.getData());
+        ECPublicKey bobPub = loadPublicKey(exchangeResponse.getData());
+
+        byte[] sharedPointHash = javacardECDH(alice, bobPub);
+        transcriptBuilder
+                .append(sharedPointHash)
+                .append(presharedKeyAlice);
+
+        byte[] transcript = transcriptBuilder.build();
+        byte[] contextHash = getContextHash(context);
+
+        setPresharedKey(presharedKeyBob);
+        appendContext(context);
+
+        Keys keys = deriveKeys(transcript, salt, contextHash);
+        byte[] tagA = hmacSha256(keys.authKeyA, transcript);
+
+        ResponseAPDU tagB = confirm(tagA);
+        Assert.assertNotEquals(Integer.toHexString(SW_SUCCESS), Integer.toHexString(tagB.getSW()));
+        clean();
+    }
+
+    @Test
+    void contextIsWrong() throws Exception {
+        byte[] aliceId = Utils.parseHex("f87165e305b0f7c4824d3806434f9d09");
+        byte[] bobId = Utils.parseHex("1a1707bb54e5fb4deddd19f07adcb4f1");
+        byte[] contextAlice = Utils.parseHex("d180d183d181d0bdd19620d0bfd196d0b7d0b4d0b0");
+        byte[] contextBob = Utils.parseHex("d180d183d181d0bdd19620d0bfd196d0b7d0b4d0b000");
+        byte[] presharedKey = Utils.parseHex("9060c103d4f27cd1ac4d3c6eb0a979db41f86003b0fffa32c6f96813aba55737");
+        byte[] salt = Utils.parseHex("");
+
+        KeyPair alice = newKeyPair();
+        byte[] alicePub = encodePublic(alice);
+
+        TranscriptBuilder transcriptBuilder = new TranscriptBuilder()
+                .append(aliceId)
+                .append(bobId)
+                .append(alicePub);
+
+        start(aliceId, bobId);
+
+        ResponseAPDU exchangeResponse = exchange(alicePub);
+
+        transcriptBuilder.append(exchangeResponse.getData());
+        ECPublicKey bobPub = loadPublicKey(exchangeResponse.getData());
+
+        byte[] sharedPointHash = javacardECDH(alice, bobPub);
+        transcriptBuilder
+                .append(sharedPointHash)
+                .append(presharedKey);
+
+        byte[] transcript = transcriptBuilder.build();
+        byte[] contextHash = getContextHash(contextAlice);
+
+        setPresharedKey(presharedKey);
+        appendContext(contextBob);
+
+        Keys keys = deriveKeys(transcript, salt, contextHash);
+        byte[] tagA = hmacSha256(keys.authKeyA, transcript);
+
+        ResponseAPDU tagB = confirm(tagA);
+        Assert.assertNotEquals(Integer.toHexString(SW_SUCCESS), Integer.toHexString(tagB.getSW()));
         clean();
     }
 
