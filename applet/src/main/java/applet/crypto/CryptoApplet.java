@@ -1,6 +1,7 @@
 package applet.crypto;
 
 import javacard.framework.*;
+import javacard.security.CryptoException;
 
 public class CryptoApplet extends Applet {
     final public static byte INS_HMAC_SHA256 = 0x25;
@@ -12,6 +13,15 @@ public class CryptoApplet extends Applet {
     final public static byte INS_HKDF_HMAC_SHA256 = 0x3a;
     final public static byte INS_P256_GENERATE_NEW_KEYPAIR = 0x41;
     final public static byte INS_P256_ECDH = 0x42;
+
+    final public static byte INS_KEX_START = 0x50;
+    final public static byte INS_KEX_EXCHANGE = 0x51;
+    final public static byte INS_KEX_SET_PRESHARED_KEY = 0x52;
+    final public static byte INS_KEX_APPEND_CONTEXT = 0x53;
+    final public static byte INS_KEX_CONFIRM = 0x54;
+    final public static byte INS_KEX_SHARED_SECRET = 0x55;
+    final public static byte INS_KEX_CLEAN = 0x56;
+
     public static byte[] buffer;
 
     public static void install(byte[] bArray, short bOffset, byte bLength) {
@@ -22,7 +32,9 @@ public class CryptoApplet extends Applet {
         AEAD.init(JCSystem.makeTransientByteArray(AEAD.REQUIRED_BUFFER_SIZE, JCSystem.CLEAR_ON_DESELECT));
         buffer = JCSystem.makeTransientByteArray((short) 1024, JCSystem.CLEAR_ON_DESELECT);
         P256.init();
-        HKDF.setBuffer(JCSystem.makeTransientByteArray(HKDF.REQUIRED_BUFFER_SIZE, JCSystem.CLEAR_ON_DESELECT), (short)0);
+        HKDF.setBuffer(JCSystem.makeTransientByteArray(HKDF.REQUIRED_BUFFER_SIZE, JCSystem.CLEAR_ON_DESELECT),
+                (short) 0);
+        KEX.init();
     }
 
     public CryptoApplet() {
@@ -133,13 +145,13 @@ public class CryptoApplet extends Applet {
         // All lengths are 1 byte
         // [salt len] [info len] [key len] [output len] [salt] [info] [...key]
         short saltLen = buffer[cdata];
-        short infoLen = buffer[(short)(cdata + 1)];
-        short keyLen = buffer[(short)(cdata + 2)];
-        short outputLen = buffer[(short)(cdata + 3)];
+        short infoLen = buffer[(short) (cdata + 1)];
+        short keyLen = buffer[(short) (cdata + 2)];
+        short outputLen = buffer[(short) (cdata + 3)];
 
-        short saltOffset = (short)(cdata + 4);
-        short infoOffset = (short)(saltOffset + saltLen);
-        short keyOffset = (short)(infoOffset + infoLen);
+        short saltOffset = (short) (cdata + 4);
+        short infoOffset = (short) (saltOffset + saltLen);
+        short keyOffset = (short) (infoOffset + infoLen);
 
         HKDF.startExtract(buffer, saltOffset, saltLen);
         HKDF.extractUpdate(buffer, keyOffset, keyLen);
@@ -151,6 +163,98 @@ public class CryptoApplet extends Applet {
 
         HKDF.clean();
         apdu.setOutgoingAndSend(keyOffset, outputLen);
+    }
+
+    private void kexSetPresharedKey(APDU apdu) {
+        try {
+            short len = apdu.setIncomingAndReceive();
+            byte[] buffer = apdu.getBuffer();
+            KEX.setPresharedKey(buffer, apdu.getOffsetCdata(), len);
+            apdu.setOutgoingAndSend((short) 0, (short) 0);
+        } catch (CryptoException ex) {
+            ISOException.throwIt(ex.getReason());
+        }
+    }
+
+    private void kexSharedSecret(APDU apdu) {
+        try {
+            apdu.setIncomingAndReceive();
+            byte[] buffer = apdu.getBuffer();
+            short outlen = KEX.sharedSecret(buffer, (short) 0);
+            apdu.setOutgoingAndSend((short) 0, outlen);
+        } catch (CryptoException ex) {
+            ISOException.throwIt(ex.getReason());
+        }
+    }
+
+    private void kexConfirm(APDU apdu) {
+        try {
+            // [tag]
+            short len = apdu.setIncomingAndReceive();
+            byte[] buffer = apdu.getBuffer();
+            short tagOffset = apdu.getOffsetCdata();
+
+            short outLen = KEX.confirm(buffer, tagOffset, len,
+                    buffer, tagOffset);
+
+            apdu.setOutgoingAndSend(tagOffset, outLen);
+        } catch (CryptoException ex) {
+            ISOException.throwIt(ex.getReason());
+        }
+    }
+
+    private void kexStart(APDU apdu) {
+        try {
+            short len = apdu.setIncomingAndReceive();
+            // [16-byte alice id] [16-byte bob id]
+            if (len != 32) {
+                ISOException.throwIt((short) 0x6617);
+            }
+
+            short idLength = 16;
+            byte[] buffer = apdu.getBuffer();
+            short aliceOffset = apdu.getOffsetCdata();
+            short bobOffset = (short) (aliceOffset + idLength);
+
+            KEX.start(buffer, aliceOffset, idLength, buffer, bobOffset, idLength);
+
+            apdu.setOutgoingAndSend((short) 0, (short) 0);
+
+        } catch (CryptoException ex) {
+            ISOException.throwIt(ex.getReason());
+        }
+    }
+
+    private void kexExchange(APDU apdu) {
+        try {
+            short len = apdu.setIncomingAndReceive();
+            // [SEC1 encoded public key]
+
+            byte[] buffer = apdu.getBuffer();
+            short offset = apdu.getOffsetCdata();
+
+            short outlen = KEX.exchange(buffer, offset, len,
+                    buffer, offset);
+
+            apdu.setOutgoingAndSend(offset, outlen);
+
+        } catch (CryptoException ex) {
+            ISOException.throwIt(ex.getReason());
+        }
+    }
+
+    private void kexAppendContext(APDU apdu) {
+        try {
+            short len = apdu.setIncomingAndReceive();
+            byte[] buffer = apdu.getBuffer();
+            short offset = apdu.getOffsetCdata();
+
+            KEX.appendContext(buffer, offset, len);
+
+            apdu.setOutgoingAndSend(offset, (short) 0);
+        } catch (CryptoException ex) {
+            ISOException.throwIt(ex.getReason());
+        }
     }
 
     public void process(APDU apdu) {
@@ -182,17 +286,38 @@ public class CryptoApplet extends Applet {
 
                 apdu.setIncomingAndReceive();
                 P256.generateNewKeypair();
-                short len = P256.publicKey(buffer, (short)0);
-                apdu.setOutgoingAndSend((short)0, len);
+                short len = P256.publicKey(buffer, (short) 0);
+                apdu.setOutgoingAndSend((short) 0, len);
                 break;
             }
             case INS_P256_ECDH: {
                 short len = apdu.setIncomingAndReceive();
-                short resLen = P256.ecdh(buffer, apdu.getOffsetCdata(), len, buffer, (short)0);
+                short resLen = P256.ecdh(buffer, apdu.getOffsetCdata(), len, buffer, (short) 0);
                 P256.clean();
-                apdu.setOutgoingAndSend((short)0, resLen);
+                apdu.setOutgoingAndSend((short) 0, resLen);
                 break;
             }
+            case INS_KEX_START:
+                kexStart(apdu);
+                break;
+            case INS_KEX_EXCHANGE:
+                kexExchange(apdu);
+                break;
+            case INS_KEX_SET_PRESHARED_KEY:
+                kexSetPresharedKey(apdu);
+                break;
+            case INS_KEX_APPEND_CONTEXT:
+                kexAppendContext(apdu);
+                break;
+            case INS_KEX_CONFIRM:
+                kexConfirm(apdu);
+                break;
+            case INS_KEX_SHARED_SECRET:
+                kexSharedSecret(apdu);
+                break;
+            case INS_KEX_CLEAN:
+                KEX.clean();
+                break;
             default:
                 ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
                 break;

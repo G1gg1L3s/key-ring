@@ -1,5 +1,7 @@
 package common;
 
+import java.util.Arrays;
+
 public class Utils {
     public static byte[] parseHex(String s) {
         final int len = s.length();
@@ -41,5 +43,12 @@ public class Utils {
             r.append(hexCode[(b & 0xF)]);
         }
         return r.toString();
+    }
+
+    // Java, seriously???
+    public static byte[] concat(byte[] first, byte[] second) {
+        byte[] result = Arrays.copyOf(first, first.length + second.length);
+        System.arraycopy(second, 0, result, first.length, second.length);
+        return result;
     }
 }
