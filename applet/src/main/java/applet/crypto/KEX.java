@@ -56,7 +56,8 @@ import javacard.security.MessageDigest;
 //    split into the auth keys.
 //
 //    contextHash = SHA512("ConfirmationKeys" || context)
-//    authKeyA || authKeyB = HKDF(authKeyMaterial, salt='', info=contextHash, outLength=32)
+//    salt = fromHex("6f6d6e692d72696e67")
+//    authKeyA || authKeyB = HKDF(authKeyMaterial, salt=salt, info=contextHash, outLength=32)
 //
 // 10. Both derive confirmation tags: tagA and tagB using appropriate
 //     authentication keys and transcript. The algorithm is HMAC-SHA256.
@@ -178,8 +179,7 @@ public class KEX {
     private static final byte[] confirmationKeys = { 'C', 'o', 'n', 'f', 'i', 'r', 'm', 'a', 't', 'i', 'o', 'n', 'K',
             'e', 'y', 's' };
 
-    // TODO: come up
-    private static final byte[] hkdfSalt = {};
+    private static final byte[] hkdfSalt = {0x6f, 0x6d, 0x6e, 0x69, 0x2d, 0x72, 0x69, 0x6e, 0x67};
 
     public static void init() {
         buffer = JCSystem.makeTransientByteArray(REQUIRED_BUFFER_LEN, JCSystem.CLEAR_ON_DESELECT);
