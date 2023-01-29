@@ -129,19 +129,25 @@ import javacard.security.MessageDigest;
 // 7. clean - remove all secrets and reset the state.
 //
 public class KEX {
-    public static final short MAX_TRANSCRIPT_LEN = 256;
+    // store transcript length alongside the trancript in RAM.
+    // This variable is changed a lot and is only required during live work,
+    // so it doesn't make sense to store and change it in persistent memory.
+    public static final short TRANSCRIPT_LENGTH_SIZE = 2;
+    public static final short MAX_TRANSCRIPT_LEN = 254;
 
     private static final short KEY_LEN = 16;
     private static final short CONTEXT_HASH_LEN = 64;
     public static final short TAG_SIZE = HmacSha256.HMAC_SIZE;
 
-    public static final short REQUIRED_BUFFER_LEN = (short) (MAX_TRANSCRIPT_LEN
+    public static final short REQUIRED_BUFFER_LEN = (short) (TRANSCRIPT_LENGTH_SIZE
+            + MAX_TRANSCRIPT_LEN
             + KEY_LEN * 4
             + CONTEXT_HASH_LEN
             + TAG_SIZE);
 
     // buffer consists of
-    // - transcript (256 bytes)
+    // - transcriptLength (2 bytes)
+    // - transcript (254 bytes)
     // - shared secret (16 bytes)
     // - auth key material (16 bytes)
     // - auth key A (16 bytes)
@@ -150,14 +156,11 @@ public class KEX {
     // - tag buffer (32 bytes)
     //
     private static byte[] buffer;
+    private static short transcriptLenOffset;
     private static short transcriptOffset;
-    private static short bufferStart;
     private static short transcriptCapacity;
-    // TODO: this variable changes a lot, move it to the ram
-    private static short transcriptLen;
-
+    private static short bufferStart;
     private static short sharedPointHashOffset;
-
     private static short sharedSecretOffset;
     private static short authKmOffset;
     private static short authKeyAOffset;
@@ -183,20 +186,22 @@ public class KEX {
 
         bufferStart = 0;
 
-        transcriptOffset = bufferStart;
-        transcriptCapacity = MAX_TRANSCRIPT_LEN;
-        transcriptLen = 0;
+        transcriptLenOffset = bufferStart;
+        transcriptOffset = (short) (transcriptLenOffset + TRANSCRIPT_LENGTH_SIZE);
 
         // Shared point will be placed temporarily to copy it to the transcript
         // We will reuse that place for shared secret key
-        sharedPointHashOffset = MAX_TRANSCRIPT_LEN;
-        sharedSecretOffset = MAX_TRANSCRIPT_LEN;
+        sharedPointHashOffset = (short) (transcriptOffset + MAX_TRANSCRIPT_LEN);
+        sharedSecretOffset = (short) (transcriptOffset + MAX_TRANSCRIPT_LEN);
 
         authKmOffset = (short) (sharedSecretOffset + KEY_LEN);
         authKeyAOffset = (short) (authKmOffset + KEY_LEN);
         authKeyBOffset = (short) (authKeyAOffset + KEY_LEN);
         contextHashOffset = (short) (authKeyBOffset + KEY_LEN);
         tagOffset = (short) (contextHashOffset + CONTEXT_HASH_LEN);
+
+        transcriptCapacity = MAX_TRANSCRIPT_LEN;
+        setTranscriptLength((short) 0);
 
         sha256 = MessageDigest.getInstance(
                 MessageDigest.ALG_SHA_256,
@@ -209,13 +214,23 @@ public class KEX {
         );
     }
 
+    private static void setTranscriptLength(short s) {
+        Util.setShort(buffer, transcriptLenOffset, s);
+    }
+
+    private static short getTranscriptLength() {
+        return Util.getShort(buffer, transcriptLenOffset);
+    }
+
     private static void appendTranscript(byte[] data, short offset, short len) {
         // Just as debug assertion
         if (len > 127) {
             CryptoException.throwIt(DATA_TOO_BIG);
         }
 
-        if ((short) (transcriptLen + len + 1) >= transcriptCapacity) {
+        short transcriptLen = getTranscriptLength();
+        short resultedLen = (short) (getTranscriptLength() + len + 1);
+        if (resultedLen > transcriptCapacity) {
             CryptoException.throwIt(TRANSCRIPT_OVERFLOW);
         }
 
@@ -229,7 +244,7 @@ public class KEX {
                 buffer, transcriptEnd, // dest
                 len);
 
-        transcriptLen += len + 1;
+        setTranscriptLength(resultedLen);
     }
 
     public static void appendContext(byte[] data, short offset, short len) {
@@ -238,6 +253,8 @@ public class KEX {
 
     public static void start(byte[] alice, short aliceOffset, short aliceLen, byte[] bob, short bobOffset,
             short bobLen) {
+        setTranscriptLength((short) 0);
+
         appendTranscript(alice, aliceOffset, aliceLen);
         appendTranscript(bob, bobOffset, bobLen);
 
@@ -277,7 +294,7 @@ public class KEX {
 
         // Derive shared secret and auth key material
         sha256.reset();
-        sha256.doFinal(buffer, transcriptOffset, transcriptLen,
+        sha256.doFinal(buffer, transcriptOffset, getTranscriptLength(),
                 buffer, sharedSecretOffset);
         sha256.reset();
 
@@ -292,6 +309,7 @@ public class KEX {
 
         HKDF.clean();
 
+        short transcriptLen = getTranscriptLength();
         // Derive tag A
         HmacSha256.start(buffer, authKeyAOffset, KEY_LEN);
         HmacSha256.update(buffer, transcriptOffset, transcriptLen);
@@ -324,6 +342,6 @@ public class KEX {
         sha256.reset();
         contextCollector.reset();
         Util.arrayFillNonAtomic(buffer, bufferStart, REQUIRED_BUFFER_LEN, (byte) 0x00);
-        transcriptLen = 0;
+        setTranscriptLength((short) 0);
     }
 }
