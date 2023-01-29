@@ -131,7 +131,7 @@ public class KEXTest extends CryptoBase {
         byte[] bobId = Utils.parseHex("1a1707bb54e5fb4deddd19f07adcb4f1");
         byte[] context = Utils.parseHex("d180d183d181d0bdd19620d0bfd196d0b7d0b4d0b0");
         byte[] presharedKey = Utils.parseHex("9060c103d4f27cd1ac4d3c6eb0a979db41f86003b0fffa32c6f96813aba55737");
-        byte[] salt = Utils.parseHex("");
+        byte[] salt = Utils.parseHex("6f6d6e692d72696e67");
 
         KeyPair alice = newKeyPair();
         byte[] alicePub = encodePublic(alice);
@@ -184,7 +184,7 @@ public class KEXTest extends CryptoBase {
         byte[] context = Utils.parseHex("d180d183d181d0bdd19620d0bfd196d0b7d0b4d0b0");
         byte[] presharedKeyAlice = Utils.parseHex("9060c103d4f27cd1ac4d3c6eb0a979db41f86003b0fffa32c6f96813aba55737");
         byte[] presharedKeyBob = Utils.parseHex("9060c103d3f27cd1ac4d3c6eb0a979db41f86003b0fffa32c6f96813aba55737");
-        byte[] salt = Utils.parseHex("");
+        byte[] salt = Utils.parseHex("6f6d6e692d72696e67");
 
         KeyPair alice = newKeyPair();
         byte[] alicePub = encodePublic(alice);
@@ -227,7 +227,7 @@ public class KEXTest extends CryptoBase {
         byte[] contextAlice = Utils.parseHex("d180d183d181d0bdd19620d0bfd196d0b7d0b4d0b0");
         byte[] contextBob = Utils.parseHex("d180d183d181d0bdd19620d0bfd196d0b7d0b4d0b000");
         byte[] presharedKey = Utils.parseHex("9060c103d4f27cd1ac4d3c6eb0a979db41f86003b0fffa32c6f96813aba55737");
-        byte[] salt = Utils.parseHex("");
+        byte[] salt = Utils.parseHex("6f6d6e692d72696e67");
 
         KeyPair alice = newKeyPair();
         byte[] alicePub = encodePublic(alice);
