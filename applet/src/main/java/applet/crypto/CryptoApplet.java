@@ -108,7 +108,7 @@ public class CryptoApplet extends Applet {
 
         // we expect the following format:
         //
-        // [48-byte key] [2-byte ad length] [ad] [2-byte data length] [data]
+        // [16-byte key] [2-byte ad length] [ad] [2-byte data length] [data]
         //
         short keyOffset = ISO7816.OFFSET_CDATA;
         short adLenOffset = (short) (keyOffset + AEAD.KEY_SIZE);

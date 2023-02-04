@@ -18,9 +18,9 @@ public class AEADTest extends CryptoBase {
         int dataLenOffset = adOffset + ad.length;
         int dataOffset = dataLenOffset + 2;
 
-        byte[] apduData = new byte[48 + 2 + ad.length + 2 + data.length];
+        byte[] apduData = new byte[key.length + 2 + ad.length + 2 + data.length];
         // resulting array is...
-        // 48 byte key
+        // 16-byte key
         System.arraycopy(key, 0, apduData, keyOffset, key.length);
         // then 2 byte length of associated data
         putShort((short) ad.length, apduData, adLenOffset);
@@ -140,7 +140,7 @@ public class AEADTest extends CryptoBase {
 
     void encryptDecrypt(String text, String ad) throws Exception {
         SecureRandom random = new SecureRandom();
-        byte[] key = random.generateSeed(48);
+        byte[] key = random.generateSeed(16);
         String keyHex = Utils.toHex(key);
 
         byte[] ct = seal(keyHex, text, ad);
