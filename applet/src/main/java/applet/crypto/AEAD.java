@@ -2,6 +2,7 @@ package applet.crypto;
 
 import javacard.framework.CardRuntimeException;
 import javacard.framework.ISOException;
+import javacard.framework.JCSystem;
 import javacard.framework.Util;
 
 // Authenticated encryption with associated data;
@@ -39,8 +40,8 @@ public class AEAD {
 
     private static byte[] buffer;
 
-    public static void init(byte[] buff) {
-        buffer = buff;
+    public static void init() {
+        buffer = JCSystem.makeTransientByteArray(AEAD.REQUIRED_BUFFER_SIZE, JCSystem.CLEAR_ON_DESELECT);
     }
 
     public static short geRequiredBufferLength(short plaintext) {
