@@ -29,7 +29,7 @@ public class CryptoApplet extends Applet {
         HmacSha256.init(JCSystem.makeTransientByteArray(HmacSha256.REQUIRED_BUFFER_LENGTH, JCSystem.CLEAR_ON_DESELECT));
         AesCtr.init(JCSystem.makeTransientByteArray(AesCtr.REQUIRED_BUFFER_LENGTH, JCSystem.CLEAR_ON_DESELECT));
         Rng.init();
-        AEAD.init(JCSystem.makeTransientByteArray(AEAD.REQUIRED_BUFFER_SIZE, JCSystem.CLEAR_ON_DESELECT));
+        AEAD.init();
         buffer = JCSystem.makeTransientByteArray((short) 1024, JCSystem.CLEAR_ON_DESELECT);
         P256.init();
         HKDF.setBuffer(JCSystem.makeTransientByteArray(HKDF.REQUIRED_BUFFER_SIZE, JCSystem.CLEAR_ON_DESELECT),
@@ -108,7 +108,7 @@ public class CryptoApplet extends Applet {
 
         // we expect the following format:
         //
-        // [48-byte key] [2-byte ad length] [ad] [2-byte data length] [data]
+        // [16-byte key] [2-byte ad length] [ad] [2-byte data length] [data]
         //
         short keyOffset = ISO7816.OFFSET_CDATA;
         short adLenOffset = (short) (keyOffset + AEAD.KEY_SIZE);
@@ -259,6 +259,10 @@ public class CryptoApplet extends Applet {
 
     public void process(APDU apdu) {
         byte[] buffer = apdu.getBuffer();
+
+        if ((buffer[ISO7816.OFFSET_CLA] == 0) && (buffer[ISO7816.OFFSET_INS] == (byte) (0xA4))) {
+            return;
+        }
 
         switch (buffer[ISO7816.OFFSET_INS]) {
             case INS_HMAC_SHA256:

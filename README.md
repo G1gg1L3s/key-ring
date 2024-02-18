@@ -23,10 +23,22 @@ gp --install applet/build/javacard/applet.cap
 
 ## Test
 
-To run tests:
+To run tests on a simulator, simply hit:
 
 ```bash
 ./gradlew test
+```
+
+To run the tests on a real device, install the applet first and then run:
+
+```bash
+./gradlew testDevice
+```
+
+If you need to run a subset of tests, use:
+
+```bash
+./gradlew test[Device] --tests AEADTest.encryptFlipByteDecrypt --info
 ```
 
 ## Design
