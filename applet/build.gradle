@@ -97,6 +97,16 @@ test {
     }
 }
 
+task testDevice(type: Test) {
+    useJUnitPlatform {
+        excludeTags 'manual'
+    }
+
+    systemProperty "device", "yes"
+
+    dependsOn test
+}
+
 // JavaCard SDKs and libraries
 final def JC212 = libsSdk + '/jc212_kit'
 final def JC221 = libsSdk + '/jc221_kit'

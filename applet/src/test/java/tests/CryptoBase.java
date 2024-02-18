@@ -1,5 +1,6 @@
 package tests;
 
+import common.Utils;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -18,17 +19,19 @@ import java.security.Security;
 
 public class CryptoBase {
     protected Card card;
-    protected final AID aid = AIDUtil.create("F000000001");
+    protected final AID simulatedAid = AIDUtil.create("F000000001");
+    protected final String realAid = "01FFFF0405060708090102";
 
     public static final int SW_SUCCESS = 0x9000;
 
-    public static boolean simulated = true;
+    public static boolean simulated = System.getProperty("device") == null;
 
     public CryptoBase() {
         if (simulated) {
-            card = new SimulatorCard(aid, CryptoApplet.class);
+            card = new SimulatorCard(simulatedAid, CryptoApplet.class);
         } else {
-            card = new PhysicalCard();
+            byte[] aid = Utils.parseHex(realAid);
+            card = new PhysicalCard(aid);
         }
         Security.addProvider(new BouncyCastleProvider());
     }
