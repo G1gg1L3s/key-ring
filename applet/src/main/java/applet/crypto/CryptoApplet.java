@@ -260,6 +260,10 @@ public class CryptoApplet extends Applet {
     public void process(APDU apdu) {
         byte[] buffer = apdu.getBuffer();
 
+        if ((buffer[ISO7816.OFFSET_CLA] == 0) && (buffer[ISO7816.OFFSET_INS] == (byte) (0xA4))) {
+            return;
+        }
+
         switch (buffer[ISO7816.OFFSET_INS]) {
             case INS_HMAC_SHA256:
                 hmacSha256(apdu);
